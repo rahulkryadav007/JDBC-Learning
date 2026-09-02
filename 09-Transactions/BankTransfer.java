@@ -19,28 +19,34 @@ public class BankTransfer {
             // Auto-commit off: dono operations ko ek single transaction banate hain.
             con.setAutoCommit(false);
 
-            debitPs.setDouble(1, amount);
-            debitPs.setInt(2, fromId);
-            debitPs.setDouble(3, amount);
-            int debited = debitPs.executeUpdate();
+            try {
+                debitPs.setDouble(1, amount);
+                debitPs.setInt(2, fromId);
+                debitPs.setDouble(3, amount);
+                int debited = debitPs.executeUpdate();
 
-            if (debited != 1) {
-                throw new SQLException("Insufficient balance or source account not found");
+                if (debited != 1) {
+                    throw new SQLException("Insufficient balance or source account not found");
+                }
+
+                creditPs.setDouble(1, amount);
+                creditPs.setInt(2, toId);
+                int credited = creditPs.executeUpdate();
+
+                if (credited != 1) {
+                    throw new SQLException("Destination account not found");
+                }
+
+                // Dono successful hain, ab permanent save.
+                con.commit();
+                System.out.println("Transfer successful");
+            } catch (SQLException e) {
+                // Beech mein koi operation fail hua to pehle operation ko bhi undo kar do.
+                con.rollback();
+                System.out.println("Transaction rolled back: " + e.getMessage());
             }
-
-            creditPs.setDouble(1, amount);
-            creditPs.setInt(2, toId);
-            int credited = creditPs.executeUpdate();
-
-            if (credited != 1) {
-                throw new SQLException("Destination account not found");
-            }
-
-            // Dono successful hain, ab permanent save.
-            con.commit();
-            System.out.println("Transfer successful");
         } catch (SQLException e) {
-            System.out.println("Transfer failed: " + e.getMessage());
+            System.out.println("Database error: " + e.getMessage());
         }
     }
 }
